@@ -26,26 +26,42 @@
   }
 </script>
 
-<div class="max-w-md mx-auto mt-16 p-8 bg-white rounded shadow">
-  <h1 class="text-2xl font-bold mb-6">Sign Up</h1>
+<div class="min-h-screen flex items-center justify-center bg-[#021526] text-[#E2E2B6] px-4">
+  <div class="w-full max-w-md p-8 rounded-2xl shadow-lg bg-[#03346E]">
+    <h1 class="text-3xl font-bold mb-6 text-center text-[#6EACDA]">Sign Up</h1>
 
-  <form on:submit|preventDefault={handleSignup} class="space-y-4">
-    <div>
-      <label class="block mb-1 font-medium">Email</label>
-      <input type="email" bind:value={email} required class="w-full border rounded px-3 py-2" />
-    </div>
+    <form on:submit|preventDefault={handleSignup} class="space-y-5">
+      <div>
+        <label class="block mb-1 font-medium text-sm">Email</label>
+        <input
+          type="email"
+          bind:value={email}
+          required
+          class="w-full bg-[#021526] border border-[#6EACDA] text-[#E2E2B6] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6EACDA]"
+        />
+      </div>
 
-    <div>
-      <label class="block mb-1 font-medium">Password</label>
-      <input type="password" bind:value={password} required class="w-full border rounded px-3 py-2" />
-    </div>
+      <div>
+        <label class="block mb-1 font-medium text-sm">Password</label>
+        <input
+          type="password"
+          bind:value={password}
+          required
+          class="w-full bg-[#021526] border border-[#6EACDA] text-[#E2E2B6] px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#6EACDA]"
+        />
+      </div>
 
-    <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50" disabled={loading}>
-      {loading ? 'Signing up...' : 'Sign Up'}
-    </button>
+      <button
+        type="submit"
+        class="w-full bg-[#6EACDA] text-[#021526] font-semibold py-2 rounded hover:bg-[#E2E2B6] hover:text-[#03346E] transition disabled:opacity-50"
+        disabled={loading}
+      >
+        {loading ? 'Signing up...' : 'Sign Up'}
+      </button>
 
-    {#if errorMsg}
-      <div class="text-red-600 mt-2">{errorMsg}</div>
-    {/if}
-  </form>
+      {#if errorMsg}
+        <div class="text-red-400 text-sm mt-2">{errorMsg}</div>
+      {/if}
+    </form>
+  </div>
 </div>
