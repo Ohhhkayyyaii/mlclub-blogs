@@ -1,73 +1,177 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { supabase } from '$lib/supabase';
-
-  let blogId = '';
+  import { page } from '$app/stores';
+  
   let title = '';
   let content = '';
-  let loading = true;
+  let category = '';
+  let cover_url = '';
+  let status = 'published';
   let errorMsg = '';
   let successMsg = '';
+  let loading = false;
+  let blogId = '';
 
-  onMount(async () => {
-    blogId = $page.params.id;
-    const { data, error } = await supabase
-      .from('blogs')
-      .select('id, title, content')
-      .eq('id', blogId)
-      .single();
-    loading = false;
-    if (error || !data) {
-      errorMsg = 'Blog not found or you do not have permission to edit.';
-      return;
+  onMount(() => {
+    try {
+      blogId = $page.params.id;
+      
+      // Get the blog data from localStorage
+      const editingBlog = localStorage.getItem('editingBlog');
+      if (editingBlog) {
+        const blog = JSON.parse(editingBlog);
+        
+        // Populate the form with existing data
+        title = blog.title || '';
+        content = blog.content || '';
+        category = blog.category || '';
+        cover_url = blog.cover_url || '';
+        status = blog.status || 'published';
+        
+        // Clear the editing data from localStorage
+        localStorage.removeItem('editingBlog');
+      } else {
+        errorMsg = 'No blog data found for editing';
+      }
+    } catch (err) {
+      errorMsg = 'Failed to load blog data: ' + err.message;
     }
-    title = data.title;
-    content = data.content;
   });
 
-  async function handleUpdate() {
+  async function handleSubmit() {
     errorMsg = '';
     successMsg = '';
-    if (!title || !content) {
-      errorMsg = 'Title and content are required.';
+
+    if (!title || !content || !category) {
+      errorMsg = 'Please fill in all required fields.';
       return;
     }
-    const { error } = await supabase
-      .from('blogs')
-      .update({ title, content })
-      .eq('id', blogId);
-    if (error) {
-      errorMsg = error.message;
-    } else {
-      successMsg = 'Blog updated! Redirecting...';
-      setTimeout(() => goto('/dashboard/blogs'), 1200);
+
+    loading = true;
+
+    try {
+      // Get existing blogs from localStorage
+      const savedBlogs = JSON.parse(localStorage.getItem('blogs') || '[]');
+      
+      // Find and update the specific blog
+      const updatedBlogs = savedBlogs.map(blog => {
+        if (blog.id === blogId) {
+          return {
+            ...blog,
+            title,
+            content,
+            category,
+            cover_url: cover_url || null,
+            status,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return blog;
+      });
+
+      // Save back to localStorage
+      localStorage.setItem('blogs', JSON.stringify(updatedBlogs));
+
+      successMsg = 'Blog updated successfully! Redirecting to My Blogs...';
+      
+      setTimeout(() => {
+        goto('/dashboard/blogs');
+      }, 2000);
+
+    } catch (error) {
+      errorMsg = error.message || 'Failed to update blog';
+    } finally {
+      loading = false;
+    }
+  }
+
+  function cancelEdit() {
+    if (confirm('Are you sure you want to cancel? Your changes will be lost.')) {
+      goto('/dashboard/blogs');
     }
   }
 </script>
 
-<div class="max-w-xl mx-auto mt-10 p-8 bg-white rounded shadow">
-  <h1 class="text-2xl font-bold mb-6">Edit Blog</h1>
-  {#if loading}
-    <div>Loading...</div>
-  {:else}
-    {#if errorMsg}
-      <div class="bg-red-100 text-red-700 p-2 rounded mb-4">{errorMsg}</div>
-    {/if}
-    <form on:submit|preventDefault={handleUpdate} class="space-y-4">
-      <div>
-        <label class="block mb-1 font-medium">Title</label>
-        <input class="w-full border rounded px-3 py-2" bind:value={title} required />
-      </div>
-      <div>
-        <label class="block mb-1 font-medium">Content</label>
-        <textarea class="w-full border rounded px-3 py-2 min-h-[120px]" bind:value={content} required></textarea>
-      </div>
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update Blog</button>
-      {#if successMsg}
-        <div class="text-green-600 mt-2">{successMsg}</div>
-      {/if}
-    </form>
-  {/if}
-</div> 
+<h2>Edit Blog</h2>
+
+{#if errorMsg}
+  <div class="message-error">{errorMsg}</div>
+{/if}
+{#if successMsg}
+  <div class="message-success">{successMsg}</div>
+{/if}
+
+<form on:submit|preventDefault={handleSubmit} style="max-width: 600px; margin: 0 auto;">
+  <div style="margin-bottom: 1.5em;">
+    <label style="display: block; margin-bottom: 0.5em; font-weight: 600;">Title *</label>
+    <input
+      type="text"
+      bind:value={title}
+      required
+      placeholder="Enter your blog title"
+      style="width: 100%; padding: 0.75em; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1em;"
+    />
+  </div>
+
+  <div style="margin-bottom: 1.5em;">
+    <label style="display: block; margin-bottom: 0.5em; font-weight: 600;">Content *</label>
+    <textarea
+      bind:value={content}
+      required
+      placeholder="Write your blog content here..."
+      rows="8"
+      style="width: 100%; padding: 0.75em; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1em; resize: vertical;"
+    ></textarea>
+  </div>
+
+  <div style="margin-bottom: 1.5em;">
+    <label style="display: block; margin-bottom: 0.5em; font-weight: 600;">Category *</label>
+    <input
+      type="text"
+      bind:value={category}
+      required
+      placeholder="e.g., Machine Learning, Deep Learning, NLP, Computer Vision"
+      style="width: 100%; padding: 0.75em; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1em;"
+    />
+  </div>
+
+  <div style="margin-bottom: 1.5em;">
+    <label style="display: block; margin-bottom: 0.5em; font-weight: 600;">Status</label>
+    <select
+      bind:value={status}
+      style="width: 100%; padding: 0.75em; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1em;"
+    >
+      <option value="published">Published</option>
+      <option value="draft">Draft</option>
+    </select>
+  </div>
+
+  <div style="margin-bottom: 2em;">
+    <label style="display: block; margin-bottom: 0.5em; font-weight: 600;">Cover Image URL (optional)</label>
+    <input
+      type="url"
+      bind:value={cover_url}
+      placeholder="https://example.com/image.jpg"
+      style="width: 100%; padding: 0.75em; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1em;"
+    />
+  </div>
+
+  <div style="display: flex; gap: 1em;">
+    <button
+      type="submit"
+      disabled={loading}
+      style="flex: 1; padding: 0.75em; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 1em; cursor: pointer; font-weight: 600;"
+    >
+      {loading ? 'Updating Blog...' : 'Update Blog'}
+    </button>
+    
+    <button
+      type="button"
+      on:click={cancelEdit}
+      style="flex: 1; padding: 0.75em; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 1em; cursor: pointer; font-weight: 600;"
+    >
+      Cancel
+    </button>
+  </div>
+</form> 

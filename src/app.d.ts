@@ -3,7 +3,9 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		// interface Locals {}
+		interface Locals {
+			// Temporarily removed Supabase types for offline development
+		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}

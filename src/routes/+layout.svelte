@@ -1,38 +1,76 @@
 <script lang="ts">
-  import '../app.css';
-  import { supabase } from '$lib/supabase';
-  import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { writable } from 'svelte/store';
+  
+  let currentUser = null;
+  let isLoggedIn = false;
+  let isAdmin = false;
 
-  let { children } = $props();
-  const isAuthenticated = writable(false);
+  function checkAuthStatus() {
+    try {
+      // Check if user is logged in
+      const userData = localStorage.getItem('currentUser');
+      if (userData) {
+        currentUser = JSON.parse(userData);
+        isLoggedIn = true;
+        isAdmin = currentUser.role === 'admin';
+      } else {
+        currentUser = null;
+        isLoggedIn = false;
+        isAdmin = false;
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+      currentUser = null;
+      isLoggedIn = false;
+      isAdmin = false;
+    }
+  }
 
-  onMount(async () => {
-    const { data } = await supabase.auth.getUser();
-    isAuthenticated.set(!!data.user);
-    supabase.auth.onAuthStateChange((_event, session) => {
-      isAuthenticated.set(!!session?.user);
-    });
+  onMount(() => {
+    checkAuthStatus();
   });
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    goto('/login');
+  function handleLogout() {
+    try {
+      localStorage.removeItem('currentUser');
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout error:', error);
+      window.location.href = '/';
+    }
   }
 </script>
 
-<nav class="bg-gray-800 text-white px-6 py-3 flex justify-between items-center">
-  <a href="/" class="text-lg font-bold">ML Club Blogs</a>
-  <div>
-    {#if $isAuthenticated}
-      <button on:click={handleLogout} class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded">Logout</button>
+<header style="background:#2563eb; color:#fff; padding:1em 0; text-align:center;">
+  <h1 style="margin:0;">ML Club Blogs</h1>
+  
+  {#if isLoggedIn && currentUser}
+    <div style="margin-bottom: 0.5em; font-size: 0.9em;">
+      Welcome, {currentUser.name} ({currentUser.role})
+    </div>
+  {/if}
+  
+  <nav>
+    <a href="/" style="color:#fff; margin:0 1em;">Home</a>
+    {#if isLoggedIn}
+      <a href="/blog/create" style="color:#fff; margin:0 1em;">Create</a>
+      <a href="/dashboard/blogs" style="color:#fff; margin:0 1em;">My Blogs</a>
+      {#if isAdmin}
+        <a href="/admin" style="color:#fff; margin:0 1em;">Admin</a>
+      {/if}
+      <button 
+        on:click={handleLogout}
+        style="background: none; border: none; color: #fff; margin: 0 1em; cursor: pointer; text-decoration: underline; font-size: inherit;"
+      >
+        Logout
+      </button>
     {:else}
-      <a href="/login" class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded">Login</a>
+      <a href="/login" style="color:#fff; margin:0 1em;">Login</a>
+      <a href="/register" style="color:#fff; margin:0 1em;">Register</a>
     {/if}
-  </div>
-</nav>
+  </nav>
+</header>
 
-<main class="max-w-4xl mx-auto mt-8 px-4">
+<div class="container">
   <slot />
-</main>
+</div>
