@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { supabase } from '$lib/supabaseClient';
   
   // Sample data for testing - replace with Supabase later
   let sampleBlogs = [
@@ -10,6 +11,7 @@
       description: 'A comprehensive guide to getting started with machine learning concepts and algorithms.',
       content: 'Machine learning is a subset of artificial intelligence that enables computers to learn and make decisions without being explicitly programmed...',
       category: 'ML',
+      tags: ['machine-learning', 'ai', 'python', 'tutorial'],
       created_at: '2025-01-15T10:00:00Z',
       status: 'published'
     },
@@ -20,6 +22,7 @@
       description: 'Understanding neural networks, backpropagation, and deep learning architectures.',
       content: 'Deep learning is a subset of machine learning that uses neural networks with multiple layers to model and understand complex patterns...',
       category: 'DL',
+      tags: ['deep-learning', 'neural-networks', 'tensorflow', 'pytorch'],
       created_at: '2025-01-14T14:30:00Z',
       status: 'published'
     },
@@ -30,6 +33,7 @@
       description: 'Learn about text processing, sentiment analysis, and language models.',
       content: 'Natural Language Processing (NLP) is a field of artificial intelligence that focuses on the interaction between computers and human language...',
       category: 'NLP',
+      tags: ['nlp', 'text-processing', 'bert', 'gpt', 'sentiment-analysis'],
       created_at: '2025-01-13T09:15:00Z',
       status: 'published'
     }
@@ -39,21 +43,26 @@
   let loading = true;
   let errorMsg = '';
 
-  onMount(() => {
+  onMount(async () => {
     try {
-      // Load blogs from localStorage (user-created blogs)
-      const savedBlogs = JSON.parse(localStorage.getItem('blogs') || '[]');
+      // Load blogs from Supabase
+      const { data, error } = await supabase
+        .from('blogs')
+        .select('*')
+        .eq('status', 'published')
+        .order('created_at', { ascending: false });
       
-      // Combine sample blogs with user-created blogs
-      let allBlogs = [...savedBlogs, ...sampleBlogs];
-      
-      // Filter to show only published blogs
-      allBlogs = allBlogs.filter(blog => blog.status === 'published');
-      
-      // Sort by creation date (newest first - reverse chronological order)
-      allBlogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      
-      blogs = allBlogs;
+      if (error) {
+        errorMsg = 'Failed to load blogs: ' + error.message;
+      } else {
+        // Combine with sample blogs for demo
+        let allBlogs = [...(data || []), ...sampleBlogs];
+        
+        // Sort by creation date (newest first)
+        allBlogs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        blogs = allBlogs;
+      }
       
     } catch (err) {
       errorMsg = 'Failed to load blogs: ' + err.message;

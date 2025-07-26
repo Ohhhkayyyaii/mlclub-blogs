@@ -6,6 +6,7 @@
   let title = '';
   let content = '';
   let category = '';
+  let tags = '';
   let cover_url = '';
   let status = 'published';
   let errorMsg = '';
@@ -26,6 +27,7 @@
         title = blog.title || '';
         content = blog.content || '';
         category = blog.category || '';
+        tags = blog.tags ? blog.tags.join(', ') : '';
         cover_url = blog.cover_url || '';
         status = blog.status || 'published';
         
@@ -62,6 +64,7 @@
             title,
             content,
             category,
+            tags: tags.split(',').map(t => t.trim()).filter(Boolean),
             cover_url: cover_url || null,
             status,
             updated_at: new Date().toISOString()
@@ -132,6 +135,16 @@
       bind:value={category}
       required
       placeholder="e.g., Machine Learning, Deep Learning, NLP, Computer Vision"
+      style="width: 100%; padding: 0.75em; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1em;"
+    />
+  </div>
+
+  <div style="margin-bottom: 1.5em;">
+    <label style="display: block; margin-bottom: 0.5em; font-weight: 600;">Tags (comma separated)</label>
+    <input
+      type="text"
+      bind:value={tags}
+      placeholder="e.g., python, machine-learning, tutorial, neural-networks"
       style="width: 100%; padding: 0.75em; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1em;"
     />
   </div>

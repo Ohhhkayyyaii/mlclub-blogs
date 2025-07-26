@@ -3,6 +3,7 @@
   import { page } from '$app/stores';
   
   let blog = null;
+  let relatedBlogs = [];
   let loading = true;
   let errorMsg = '';
 
@@ -27,6 +28,7 @@ Machine learning algorithms are typically classified into three broad categories
 
 Machine learning is used in a wide variety of applications, from recommendation systems and image recognition to natural language processing and autonomous vehicles.`,
       category: 'ML',
+      tags: ['machine-learning', 'ai', 'python', 'tutorial'],
       created_at: '2025-01-15T10:00:00Z',
       status: 'published'
     },
@@ -53,6 +55,7 @@ Key concepts in deep learning include:
 
 Deep learning has revolutionized fields like computer vision, natural language processing, and speech recognition, achieving state-of-the-art results in many applications.`,
       category: 'DL',
+      tags: ['deep-learning', 'neural-networks', 'tensorflow', 'pytorch'],
       created_at: '2025-01-14T14:30:00Z',
       status: 'published'
     },
@@ -79,8 +82,9 @@ Key areas of NLP include:
 
 Modern NLP heavily relies on deep learning models, particularly transformer architectures like BERT and GPT, which have achieved remarkable results in understanding and generating human language.`,
       category: 'NLP',
+      tags: ['nlp', 'text-processing', 'bert', 'gpt', 'sentiment-analysis'],
       created_at: '2025-01-13T09:15:00Z',
-      status: 'draft'
+      status: 'published'
     }
   ];
 
@@ -97,6 +101,21 @@ Modern NLP heavily relies on deep learning models, particularly transformer arch
       
       if (!blog) {
         errorMsg = 'Blog not found';
+      } else {
+        // Find related blogs based on category and tags
+        relatedBlogs = allBlogs
+          .filter(b => b.id !== blogId && b.status === 'published')
+          .filter(b => {
+            // Match by category
+            if (b.category === blog.category) return true;
+            // Match by tags
+            if (blog.tags && b.tags) {
+              const commonTags = blog.tags.filter(tag => b.tags.includes(tag));
+              if (commonTags.length > 0) return true;
+            }
+            return false;
+          })
+          .slice(0, 3); // Show max 3 related blogs
       }
       
     } catch (err) {
@@ -142,6 +161,19 @@ Modern NLP heavily relies on deep learning models, particularly transformer arch
           {blog.description}
         </p>
       {/if}
+
+      {#if blog.tags && blog.tags.length > 0}
+        <div style="margin-bottom: 2em;">
+          <h4 style="margin: 0 0 0.5em 0; color: #374151;">Tags:</h4>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5em;">
+            {#each blog.tags as tag}
+              <span style="padding: 0.25em 0.75em; background: #e5e7eb; color: #374151; border-radius: 4px; font-size: 0.8em; font-weight: 500;">
+                #{tag}
+              </span>
+            {/each}
+          </div>
+        </div>
+      {/if}
     </div>
 
     <!-- Blog Content -->
@@ -151,8 +183,39 @@ Modern NLP heavily relies on deep learning models, particularly transformer arch
       {/each}
     </div>
 
+    <!-- Related Blogs Section -->
+    {#if relatedBlogs.length > 0}
+      <div style="margin-top: 3em; padding-top: 2em; border-top: 1px solid #e5e7eb;">
+        <h3 style="margin-bottom: 1em; color: #1f2937;">Related Blogs</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5em;">
+          {#each relatedBlogs as relatedBlog}
+            <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5em; background: #f9fafb;">
+              <h4 style="margin: 0 0 0.5em 0; color: #1f2937; font-size: 1.1em;">
+                <a href={`/blogs/${relatedBlog.id}`} style="color: inherit; text-decoration: none;">
+                  {relatedBlog.title}
+                </a>
+              </h4>
+              <p style="margin: 0 0 0.5em 0; color: #6b7280; font-size: 0.9em;">
+                By {relatedBlog.author} • {new Date(relatedBlog.created_at).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
+              </p>
+              <p style="margin: 0 0 0.5em 0; color: #374151; font-size: 0.9em; line-height: 1.4;">
+                {relatedBlog.content.length > 100 ? relatedBlog.content.substring(0, 100) + '...' : relatedBlog.content}
+              </p>
+              <a href={`/blogs/${relatedBlog.id}`} style="color: #3b82f6; font-weight: 600; text-decoration: none; font-size: 0.9em;">
+                Read More →
+              </a>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
     <!-- Back to Blogs Link -->
-    <div style="margin-top: 3em; padding-top: 2em; border-top: 1px solid #e5e7eb;">
+    <div style="margin-top: 2em; padding-top: 1em; border-top: 1px solid #e5e7eb;">
       <a href="/" style="color: #3b82f6; font-weight: 600; text-decoration: none; font-size: 1em;">
         ← Back to All Blogs
       </a>

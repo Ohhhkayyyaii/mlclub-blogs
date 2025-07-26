@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  // import { supabase } from '$lib/supabaseClient';
   
   let currentUser = null;
   let isLoggedIn = false;
@@ -30,15 +31,15 @@
     checkAuthStatus();
   });
 
-  function handleLogout() {
-    try {
-      localStorage.removeItem('currentUser');
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Logout error:', error);
-      window.location.href = '/';
-    }
-  }
+              function handleLogout() {
+                try {
+                  localStorage.removeItem('currentUser');
+                  window.location.href = '/';
+                } catch (error) {
+                  console.error('Logout error:', error);
+                  window.location.href = '/';
+                }
+              }
 </script>
 
 <header style="background:#2563eb; color:#fff; padding:1em 0; text-align:center;">

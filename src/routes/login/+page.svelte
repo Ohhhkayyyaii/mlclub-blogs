@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { supabase, isSupabaseAvailable } from '$lib/supabaseClient';
   
   let email = '';
   let password = '';
@@ -34,49 +35,48 @@
     loading = true;
 
     try {
-      // Simple authentication for demo purposes
-      // In a real app, this would validate against a database
+      if (!isSupabaseAvailable() || !supabase) {
+        errorMsg = 'Supabase is not available. Please check your configuration.';
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      if (loginType === 'admin') {
-        // Admin login credentials
-        if (email === 'admin@mlclub.com' && password === 'admin123') {
-          const adminUser = {
-            id: 'admin-1',
-            email: email,
-            name: 'Admin User',
-            role: 'admin',
-            loggedInAt: new Date().toISOString()
-          };
-          
-          localStorage.setItem('currentUser', JSON.stringify(adminUser));
-          successMsg = 'Admin login successful! Redirecting to admin dashboard...';
-          
-          setTimeout(() => {
-            window.location.href = '/admin';
-          }, 1000);
-        } else {
-          errorMsg = 'Invalid admin credentials. Use admin@mlclub.com / admin123';
-        }
+      if (error) {
+        errorMsg = error.message;
       } else {
-        // Regular user login
-        if (email === 'user@mlclub.com' && password === 'user123') {
-          const regularUser = {
-            id: 'user-1',
-            email: email,
-            name: 'Regular User',
-            role: 'user',
-            loggedInAt: new Date().toISOString()
-          };
-          
-          localStorage.setItem('currentUser', JSON.stringify(regularUser));
-          successMsg = 'Login successful! Redirecting to your blogs...';
-          
-          setTimeout(() => {
-            window.location.href = '/dashboard/blogs';
-          }, 1500);
-        } else {
-          errorMsg = 'Invalid user credentials. Use user@mlclub.com / user123';
+        // Get user profile from profiles table
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+        
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
         }
+        
+        // Store user data in localStorage for client-side access
+        const userData = {
+          id: data.user.id,
+          email: data.user.email,
+          name: profile?.name || data.user.email?.split('@')[0] || 'User',
+          role: profile?.role || 'user'
+        };
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+        
+        successMsg = 'Login successful! Redirecting...';
+        
+        setTimeout(() => {
+          if (userData.role === 'admin') {
+            window.location.href = '/admin';
+          } else {
+            window.location.href = '/dashboard/blogs';
+          }
+        }, 1500);
       }
     } catch (err) {
       errorMsg = 'Login failed: ' + err.message;
@@ -121,7 +121,7 @@
         type="email"
         bind:value={email}
         required
-        placeholder={loginType === 'admin' ? 'admin@mlclub.com' : 'user@mlclub.com'}
+        placeholder="Enter your email"
         style="width: 100%; padding: 0.75em; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1em;"
       />
     </div>
@@ -132,7 +132,7 @@
         type="password"
         bind:value={password}
         required
-        placeholder={loginType === 'admin' ? 'admin123' : 'user123'}
+        placeholder="Enter your password"
         style="width: 100%; padding: 0.75em; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1em;"
       />
     </div>
@@ -153,15 +153,12 @@
     </button>
   </form>
 
-  <!-- Demo Credentials -->
-  <div style="margin-top: 2em; padding: 1em; background: #f3f4f6; border-radius: 6px; font-size: 0.9em;">
-    <h4 style="margin: 0 0 0.5em 0; color: #374151;">Demo Credentials:</h4>
-    <div style="margin-bottom: 0.5em;">
-      <strong>Regular User:</strong> user@mlclub.com / user123
-    </div>
-    <div>
-      <strong>Admin:</strong> admin@mlclub.com / admin123
-    </div>
+  <!-- Supabase Notice -->
+  <div style="margin-top: 2em; padding: 1em; background: #dbeafe; border-radius: 6px; font-size: 0.9em;">
+    <h4 style="margin: 0 0 0.5em 0; color: #1e40af;">Supabase Authentication</h4>
+    <p style="margin: 0; color: #1e40af;">
+      This app uses Supabase for authentication. Register a new account or use existing credentials.
+    </p>
   </div>
 
   <!-- Register Link -->

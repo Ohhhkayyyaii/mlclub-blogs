@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { supabase } from '$lib/supabaseClient';
   
   let name = '';
   let email = '';
@@ -40,44 +41,53 @@
     loading = true;
 
     try {
-      // Simple registration for demo purposes
-      // In a real app, this would save to a database
-      
-      // Check if user already exists
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-      const userExists = existingUsers.find(user => user.email === email);
-      
-      if (userExists) {
-        errorMsg = 'A user with this email already exists.';
+      if (!isSupabaseAvailable() || !supabase) {
+        errorMsg = 'Supabase is not available. Please check your configuration.';
         return;
       }
 
-      // Create new user
-      const newUser = {
-        id: Date.now().toString(),
-        name,
+      // Register user with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
         email,
-        password, // In real app, this would be hashed
-        role: 'user',
-        createdAt: new Date().toISOString()
-      };
-
-      // Save user to localStorage
-      existingUsers.push(newUser);
-      localStorage.setItem('users', JSON.stringify(existingUsers));
-
-      successMsg = 'Registration successful! You can now login with your credentials.';
+        password,
+        options: {
+          data: {
+            name: name
+          }
+        }
+      });
       
-      // Clear form
-      name = '';
-      email = '';
-      password = '';
-      confirmPassword = '';
-      
-      setTimeout(() => {
-        goto('/login');
-      }, 2000);
+      if (error) {
+        errorMsg = error.message;
+      } else {
+        // Create profile in profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: data.user?.id,
+              name: name,
+              email: email,
+              role: 'user'
+            }
+          ]);
+        
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
 
+        successMsg = 'Registration successful! Please check your email to verify your account.';
+        
+        // Clear form
+        name = '';
+        email = '';
+        password = '';
+        confirmPassword = '';
+        
+        setTimeout(() => {
+          goto('/login');
+        }, 2000);
+      }
     } catch (err) {
       errorMsg = 'Registration failed: ' + err.message;
     } finally {

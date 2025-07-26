@@ -1,25 +1,49 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { supabase, isSupabaseAvailable } from '$lib/supabaseClient';
   
   let title = '';
   let content = '';
   let category = '';
+  let tags = '';
   let cover_url = '';
   let errorMsg = '';
   let successMsg = '';
   let loading = false;
   let currentUser = null;
 
-  onMount(() => {
-    // Check if user is logged in
-    const userData = localStorage.getItem('currentUser');
-    if (!userData) {
-      // Redirect to login if not authenticated
-      goto('/login');
-      return;
+  onMount(async () => {
+    if (isSupabaseAvailable() && supabase) {
+      // Use Supabase authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        goto('/login');
+        return;
+      }
+      
+      // Get user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      currentUser = {
+        id: session.user.id,
+        email: session.user.email,
+        name: profile?.name || session.user.email?.split('@')[0] || 'User',
+        role: profile?.role || 'user'
+      };
+    } else {
+      // Use local authentication
+      const userData = localStorage.getItem('currentUser');
+      if (!userData) {
+        goto('/login');
+        return;
+      }
+      currentUser = JSON.parse(userData);
     }
-    currentUser = JSON.parse(userData);
   });
 
   async function handleSubmit() {
@@ -34,27 +58,53 @@
     loading = true;
     
     try {
-      // Simulate creating a blog (local storage for now)
-      const newBlog = {
-        id: Date.now().toString(),
-        title,
-        content,
-        category,
-        cover_url: cover_url || null,
-        status: 'published', // Set as published so it appears on home page
-        author: currentUser.name,
-        created_at: new Date().toISOString()
-      };
-      
-      // Store in localStorage for demo
-      const existingBlogs = JSON.parse(localStorage.getItem('blogs') || '[]');
-      existingBlogs.unshift(newBlog);
-      localStorage.setItem('blogs', JSON.stringify(existingBlogs));
+      if (isSupabaseAvailable() && supabase) {
+        // Create blog in Supabase
+        const { data, error } = await supabase
+          .from('blogs')
+          .insert([
+            {
+              title,
+              content,
+              category,
+              tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+              cover_url: cover_url || null,
+              status: 'published',
+              author: currentUser.name,
+              author_id: currentUser.id
+            }
+          ])
+          .select()
+          .single();
+        
+        if (error) {
+          errorMsg = error.message;
+          return;
+        }
+      } else {
+        // Fallback to localStorage
+        const newBlog = {
+          id: Date.now().toString(),
+          title,
+          content,
+          category,
+          tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+          cover_url: cover_url || null,
+          status: 'published',
+          author: currentUser.name,
+          created_at: new Date().toISOString()
+        };
+        
+        const existingBlogs = JSON.parse(localStorage.getItem('blogs') || '[]');
+        existingBlogs.unshift(newBlog);
+        localStorage.setItem('blogs', JSON.stringify(existingBlogs));
+      }
       
       successMsg = 'Blog created successfully! Redirecting to home...';
       title = '';
       content = '';
       category = '';
+      tags = '';
       cover_url = '';
       setTimeout(() => goto('/'), 2000);
       
@@ -98,13 +148,23 @@
     ></textarea>
   </div>
 
-  <div style="margin-bottom: 1.5em;">
+    <div style="margin-bottom: 1.5em;">
     <label style="display: block; margin-bottom: 0.5em; font-weight: 600;">Category *</label>
-    <input 
-      type="text" 
-      bind:value={category} 
-      required 
+    <input
+      type="text"
+      bind:value={category}
+      required
       placeholder="e.g., Machine Learning, Deep Learning, NLP, Computer Vision"
+      style="width: 100%; padding: 0.75em; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1em;"
+    />
+  </div>
+
+  <div style="margin-bottom: 1.5em;">
+    <label style="display: block; margin-bottom: 0.5em; font-weight: 600;">Tags (comma separated)</label>
+    <input
+      type="text"
+      bind:value={tags}
+      placeholder="e.g., python, machine-learning, tutorial, neural-networks"
       style="width: 100%; padding: 0.75em; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1em;"
     />
   </div>

@@ -4,7 +4,8 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			// Temporarily removed Supabase types for offline development
+			supabase: import('@supabase/ssr').SupabaseClient | null;
+			session: import('@supabase/supabase-js').Session | null;
 		}
 		// interface PageData {}
 		// interface PageState {}
