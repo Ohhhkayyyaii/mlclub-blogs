@@ -1,0 +1,3 @@
+nums.map((val)=> {
+    console.log(val);
+})
